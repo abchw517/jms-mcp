@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-- Docker 构建切换到固定版本 uv，以 `uv.lock` 严格同步生产依赖。
-- 拆分依赖层和项目层，启用 BuildKit 缓存、copy 链接模式与字节码预编译。
-- 构建与运行阶段共用 Python 基础镜像，仅复制非 editable 虚拟环境；保留非 root、健康检查与直接启动入口。
-- CI 增加断网、只读、非 root 环境下的导入与离线工具目录检查。
+- Docker 切换为固定版本 uv Python 3.11 Alpine 单阶段镜像，挂载锁文件与项目配置，分层安装生产依赖。
+- 使用 `UV_COMPILE_BYTECODE=1`、`UV_LINK_MODE=copy` 与 BuildKit 缓存；虚拟环境位于 `/app/.venv`。
+- 使用项目实际入口 `uv run --no-sync jms-mcp serve`，保留非 root 与健康检查。
+- uv 缓存位于 `/tmp/uv-cache`，只读容器配置 tmpfs/emptyDir；CI 校验锁文件与 Python 版本，并执行断网运行检查。
 
 ## 0.1.0 — 2026-10-30
 

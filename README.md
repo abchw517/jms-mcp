@@ -127,8 +127,9 @@ include_operations=assets_hosts_list,assets_hosts_create
 
 ## 部署与运行边界
 
-- Docker 使用固定版本 uv，从 `uv.lock` 执行 `uv sync --locked`；锁文件与项目不一致时构建失败。先安装依赖、再安装项目，并使用 BuildKit 缓存加速重复构建。需要启用 BuildKit 的 Docker/Buildx。
-- 构建时使用系统 Python 并禁用 uv 下载解释器；运行镜像仅复制 `/opt/venv`，使用非 editable 安装，无需源码目录、uv 或启动时联网安装。`requirements.lock` 保留为兼容导出，Docker 不再使用它。可通过 `--build-arg UV_VERSION=...`、`--build-arg PYTHON_IMAGE=...` 覆盖构建版本，变更后需重新验证。
+- Docker 采用 `ghcr.io/astral-sh/uv:0.13.4-python3.11-alpine` 单阶段镜像。通过 bind 挂载 `uv.lock` 与 `pyproject.toml`，先执行 `uv sync --frozen --no-install-project --no-dev --no-editable`，再复制项目并安装；启用 BuildKit 缓存、copy 链接模式与字节码预编译。需要启用 BuildKit 的 Docker/Buildx。
+- 显式使用镜像内的 Python 3.11，禁止 uv 下载解释器；虚拟环境位于 `/app/.venv`。`requirements.lock` 保留为兼容导出，Docker 不再使用它。`--frozen` 直接使用现有锁文件，CI 通过 `uv lock --check` 校验锁文件与项目一致。可通过 `--build-arg UV_IMAGE=...` 覆盖基础镜像，变更后需重新验证。
+- 项目提供的入口是 `jms-mcp`，容器使用 `uv run --no-sync jms-mcp serve`，启动时不重新同步依赖。uv 初始化缓存需要可写临时目录，缓存位于 `/tmp/uv-cache`；只读根文件系统部署需挂载可写 `/tmp`，Compose 与 Kubernetes 模板已配置。
 - 镜像以 UID/GID `10001` 运行，支持只读根文件系统。Kubernetes 模板见 [deploy/kubernetes.yaml](deploy/kubernetes.yaml)。
 - 默认校验 TLS。内网 CA 使用 `ca_bundle` 并挂载 CA 文件；`tls_verify=false` 仅用于临时排障。
 - 默认关闭环境 HTTP 代理继承，需要时设置 `trust_env=true`。

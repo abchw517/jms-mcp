@@ -35,8 +35,14 @@ spec:
         runAsNonRoot: true
         runAsUser: 10001
         runAsGroup: 10001
+        fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
       containers:
         - name: jms-mcp
           # 占位镜像：自行构建并推送到你的镜像仓库。
@@ -49,6 +55,9 @@ spec:
                 name: jms-mcp
             - secretRef:
                 name: jms-mcp-auth
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 100m

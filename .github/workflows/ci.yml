@@ -16,6 +16,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
+      - run: uv lock --check
       - run: uv sync --frozen --extra dev
       - run: uv run --frozen ruff check .
       - run: uv run --frozen ruff format --check .
@@ -29,13 +30,13 @@ jobs:
       - run: docker run --rm jms-mcp:ci --version
       - name: Verify isolated runtime
         run: |
-          docker run --rm --network=none --read-only --cap-drop=ALL \
+          docker run --rm --network=none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --cap-drop=ALL \
             --security-opt=no-new-privileges \
-            --entrypoint /opt/venv/bin/python jms-mcp:ci -c \
-            'import importlib.util, os, jms_mcp; assert os.geteuid() == 10001; assert jms_mcp.__file__.startswith("/opt/venv/"); assert importlib.util.find_spec("pytest") is None'
+            --entrypoint /app/.venv/bin/python jms-mcp:ci -c \
+            'import importlib.util, os, jms_mcp; assert os.geteuid() == 10001; import sys; assert sys.version_info[:2] == (3, 11); assert jms_mcp.__file__.startswith("/app/.venv/"); assert importlib.util.find_spec("pytest") is None'
       - name: Verify offline catalog
         run: |
-          docker run --rm --network=none --read-only --cap-drop=ALL \
+          docker run --rm --network=none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m --cap-drop=ALL \
             --security-opt=no-new-privileges \
             -v "$PWD/tests/fixtures:/fixtures:ro" \
             jms-mcp:ci catalog --schema /fixtures/jumpserver-3.10.15-minimal.json
