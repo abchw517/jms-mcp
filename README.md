@@ -127,6 +127,8 @@ include_operations=assets_hosts_list,assets_hosts_create
 
 ## 部署与运行边界
 
+- Docker 使用固定版本 uv，从 `uv.lock` 执行 `uv sync --locked`；锁文件与项目不一致时构建失败。先安装依赖、再安装项目，并使用 BuildKit 缓存加速重复构建。需要启用 BuildKit 的 Docker/Buildx。
+- 构建时使用系统 Python 并禁用 uv 下载解释器；运行镜像仅复制 `/opt/venv`，使用非 editable 安装，无需源码目录、uv 或启动时联网安装。`requirements.lock` 保留为兼容导出，Docker 不再使用它。可通过 `--build-arg UV_VERSION=...`、`--build-arg PYTHON_IMAGE=...` 覆盖构建版本，变更后需重新验证。
 - 镜像以 UID/GID `10001` 运行，支持只读根文件系统。Kubernetes 模板见 [deploy/kubernetes.yaml](deploy/kubernetes.yaml)。
 - 默认校验 TLS。内网 CA 使用 `ca_bundle` 并挂载 CA 文件；`tls_verify=false` 仅用于临时排障。
 - 默认关闭环境 HTTP 代理继承，需要时设置 `trust_env=true`。

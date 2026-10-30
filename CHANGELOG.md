@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Docker 构建切换到固定版本 uv，以 `uv.lock` 严格同步生产依赖。
+- 拆分依赖层和项目层，启用 BuildKit 缓存、copy 链接模式与字节码预编译。
+- 构建与运行阶段共用 Python 基础镜像，仅复制非 editable 虚拟环境；保留非 root、健康检查与直接启动入口。
+- CI 增加断网、只读、非 root 环境下的导入与离线工具目录检查。
+
 ## 0.1.0 — 2026-10-30
 
 - 原生解析 Swagger 2 请求体、definitions、本地引用、查询参数和路径级参数。
