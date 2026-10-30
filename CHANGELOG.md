@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- 修复启动失败时通用日志隐藏配置原因的问题；报告字段及错误类型并隐藏输入值，单独说明 Token 引号、缺失密钥和认证格式问题。
+- 新增离线 `check-config` 命令，支持配置与可选 CA 文件检查；补充诊断与凭证不泄露回归测试。
+
 - 去掉外部 Dockerfile syntax 指令，使用 BuildKit 自带前端，避免构建启动时额外拉取 Docker Hub 前端镜像。
 
 - 新增根目录 `main.py` 统一入口，无参启动服务，支持版本和 catalog 子命令；Docker 同步使用脚本入口。

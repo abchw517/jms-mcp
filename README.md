@@ -97,6 +97,24 @@ docker stop jms-mcp
 docker rm jms-mcp
 ```
 
+### 启动失败时检查配置
+
+如果旧镜像只输出 `Invalid configuration or local file; check .env and file paths`，表示旧版通用错误处理隐藏了具体异常，不能直接据此判断错误项。优先检查 `api_token` 是否残留引号、`api_key` 是否为空或含空格、`jumpserver_url` 是否附加了 `/api/v1`，以及端口和布尔配置的格式。
+
+更新源码并重新构建镜像后，可执行离线检查；旧镜像不包含 `check-config` 命令：
+
+```bash
+docker run --rm --network=none \
+  --env-file "$PWD/.env" \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,mode=1777 \
+  mharbor-cs.cloud.kemai.cn/public/jms-mcp:202610301650 check-config
+```
+
+本地安装也可执行 `uv run --frozen main.py check-config`。该命令不请求 JumpServer，检查配置与可选 CA 文件；通过不代表网络、Token 有效性或上游权限已经验证。新版本会指出缺失字段、认证引号或格式、错误字段类型与 CA 挂载问题，不输出凭证值。
+
+`--restart unless-stopped` 会在应用退出后重启容器，所以同一配置错误可能反复出现在日志里。修正 `.env` 后按前文重新创建容器。
+
 ### 本地安装
 
 ```bash

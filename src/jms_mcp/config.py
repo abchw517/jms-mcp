@@ -6,6 +6,10 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class ConfigurationError(ValueError):
+    """Configuration failure whose message contains no supplied values."""
+
+
 def validate_url(value: str) -> str:
     parsed = urlsplit(value)
     if (
@@ -22,7 +26,9 @@ def validate_url(value: str) -> str:
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
+    model_config = SettingsConfigDict(
+        env_file=".env", extra="ignore", case_sensitive=False, hide_input_in_errors=True
+    )
 
     jumpserver_url: str = ""
     swagger_url: str = ""
@@ -67,6 +73,14 @@ class Settings(BaseSettings):
     def url_valid(cls, value: str) -> str:
         return validate_url(value) if value else value
 
+    @field_validator("log_level")
+    @classmethod
+    def log_level_valid(cls, value: str) -> str:
+        value = value.strip().upper()
+        if value not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+            raise ConfigurationError("log_level must be DEBUG, INFO, WARNING, ERROR or CRITICAL")
+        return value
+
     @field_validator("base_path")
     @classmethod
     def base_path_valid(cls, value: str) -> str:
@@ -79,27 +93,40 @@ class Settings(BaseSettings):
 
     def authorization(self) -> str:
         token = self.api_token.get_secret_value().strip()
+        if token.startswith(('"', "'")) or token.endswith(('"', "'")):
+            raise ConfigurationError(
+                "api_token contains quote characters; remove quotes when using Docker --env-file"
+            )
         if not token or "\r" in token or "\n" in token:
-            raise ValueError("api_token must contain a non-empty upstream credential")
+            raise ConfigurationError("api_token must contain a non-empty upstream credential")
         parts = token.split()
         if len(parts) == 2 and parts[0].lower() in {"bearer", "token"}:
             return f"{parts[0].title()} {parts[1]}"
         if len(parts) != 1 or self.auth_scheme.lower() not in {"bearer", "token"}:
-            raise ValueError("Use a Bearer/Token credential or a bare token with auth_scheme")
+            raise ConfigurationError(
+                "api_token must use Bearer/Token plus one token, or a bare token with auth_scheme"
+            )
         return f"{self.auth_scheme.title()} {token}"
 
     def validate_runtime(self) -> None:
         if not self.jumpserver_url:
-            raise ValueError("jumpserver_url is required")
+            raise ConfigurationError("jumpserver_url is required")
         if urlsplit(self.jumpserver_url).path.rstrip("/").endswith("/api/v1"):
-            raise ValueError("jumpserver_url must be the host root, without /api/v1")
+            raise ConfigurationError("jumpserver_url must be the host root, without /api/v1")
         if self.swagger_url:
             root, swagger = urlsplit(self.jumpserver_url), urlsplit(self.swagger_url)
             if (root.scheme, root.netloc) != (swagger.scheme, swagger.netloc):
-                raise ValueError("swagger_url must use the same origin as jumpserver_url")
+                raise ConfigurationError("swagger_url must use the same origin as jumpserver_url")
         self.authorization()
         if not self.api_key.get_secret_value():
             if not self.allow_unauthenticated or self.server_host not in {"127.0.0.1", "::1"}:
-                raise ValueError("api_key is required; unauthenticated mode is loopback-only")
+                raise ConfigurationError(
+                    "api_key is required; unauthenticated mode is loopback-only"
+                )
+        key = self.api_key.get_secret_value()
+        if key.startswith(('"', "'")) or key.endswith(('"', "'")):
+            raise ConfigurationError(
+                "api_key contains quote characters; remove quotes when using Docker --env-file"
+            )
         if any(c in self.api_key.get_secret_value() for c in " \t\r\n"):
-            raise ValueError("api_key must be a token without whitespace")
+            raise ConfigurationError("api_key must be a token without whitespace")
