@@ -33,7 +33,71 @@ curl --fail http://127.0.0.1:8099/readyz
 
 默认 Compose 仅映射到本机 `127.0.0.1:8099`。跨主机使用时，配置端口映射、`allowed_hosts`，并通过可信网络或 TLS 反向代理接入。
 
-也可本地安装：
+### 使用 docker run 启动已有镜像
+
+推荐通过 `--env-file` 读取宿主机的 `.env` 并注入容器环境变量，**无需挂载该文件，也不要把真实凭证打进镜像**。镜像启动时已经调用 `uv run --no-sync main.py serve`，不需要追加启动命令。
+
+先复制并编辑配置：
+
+```bash
+cp .env.example .env
+chmod 600 .env
+```
+
+至少填写以下内容。Docker `--env-file` 的值不要加引号；例如写成 `api_token=Bearer xxx`，不要写成 `api_token="Bearer xxx"`，否则引号会成为传入值的一部分。
+
+```ini
+jumpserver_url=https://jumpserver.example.com
+api_token=Bearer REPLACE_WITH_JUMPSERVER_TOKEN
+api_key=REPLACE_WITH_RANDOM_MCP_KEY
+
+server_host=0.0.0.0
+server_port=8099
+# 替换为MCP服务器的实际访问IP或域名；不是JumpServer地址。
+allowed_hosts=192.168.1.10:*,127.0.0.1:*,localhost:*
+
+read_only=true
+include_paths=/api/v1/assets/*
+max_tools=100
+tls_verify=true
+```
+
+如果使用 JumpServer 私有 Token，写成 `api_token=Token xxx`。请替换示例域名、IP 与两类密钥。下面沿用示例镜像标签；请确保本机存在该镜像，或可从镜像仓库拉取，后续版本请替换为实际标签。
+
+```bash
+docker run -d \
+  --name jms-mcp \
+  --restart unless-stopped \
+  --env-file "$PWD/.env" \
+  -p 8099:8099 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m,mode=1777 \
+  --cap-drop ALL \
+  --security-opt no-new-privileges \
+  mharbor-cs.cloud.kemai.cn/public/jms-mcp:202610301650
+```
+
+`/tmp` 临时挂载供 uv 初始化缓存使用。此命令将端口发布到宿主机所有地址；只需要本机访问时，改为 `-p 127.0.0.1:8099:8099`。MCP 客户端使用 `http://服务器IP:8099/sse` 或 `/mcp`，认证头为 `Authorization: Bearer <api_key>`，对应独立的 MCP 入站密钥。
+
+检查运行状态：
+
+```bash
+docker ps --filter name=jms-mcp
+docker logs --tail=100 -f jms-mcp
+# 在另一个终端执行：
+curl --fail http://127.0.0.1:8099/readyz
+```
+
+初始化成功时返回 `{"ready":true}`。就绪接口用于确认启动初始化，不持续验证上游 Token 的有效性。
+
+修改宿主机 `.env` 后必须重新创建容器，`docker restart` 不会重新读取 `--env-file`。停止并删除旧容器后，重新执行上面的 `docker run` 命令：
+
+```bash
+docker stop jms-mcp
+docker rm jms-mcp
+```
+
+### 本地安装
 
 ```bash
 python3 -m venv .venv
@@ -60,7 +124,7 @@ uv run --frozen main.py catalog --schema /tmp/jms-swagger-check.json
 
 ```ini
 jumpserver_url=https://jumpserver.example.com
-api_token="Bearer <JumpServer访问Token>"
+api_token=Bearer <JumpServer访问Token>
 api_key=<独立生成的MCP入站密钥>
 ```
 
@@ -68,7 +132,7 @@ api_key=<独立生成的MCP入站密钥>
 - JumpServer 3.10.15 登录访问令牌使用 `Bearer <token>`；私有 Token 使用 `Token <token>`。Access Key ID/Secret 的 HTTP 签名认证不在本版范围内。
 - 裸 `api_token` 默认添加 `Bearer `；裸私有 Token 需设置 `auth_scheme=Token`。不要重复添加认证前缀。
 - `api_key` 只填密钥本身。生成示例：`python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`。
-- Token 过期后更新配置并重启服务；本版不保存密码，也不自动刷新令牌。
+- Token 过期后更新配置：本地进程需重启，Docker `--env-file` 部署需重新创建容器；本版不保存密码，也不自动刷新令牌。
 - 配置 `jms_org_id` 可为文档请求与业务请求统一发送 `X-JMS-ORG`；不允许工具参数覆盖上游认证。
 
 MCP 客户端示例（Claude Code 等支持 SSE 的客户端）：
@@ -163,7 +227,7 @@ include_operations=assets_hosts_list,assets_hosts_create
 旧副本可删除这行后重试：
 
 ```bash
-sed -i '/^# syntax=docker\\/dockerfile:1$/d' Dockerfile
+sed -i '/^# syntax=docker\/dockerfile:1$/d' Dockerfile
 DOCKER_BUILDKIT=1 docker build -t jms-mcp:local .
 ```
 
