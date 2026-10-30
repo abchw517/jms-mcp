@@ -1,0 +1,22 @@
+services:
+  jms-mcp:
+    image: jms-mcp:0.1.0
+    build: .
+    env_file: .env
+    ports:
+      - "127.0.0.1:8099:8099"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: 1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

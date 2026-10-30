@@ -1,0 +1,59 @@
+{
+  "swagger": "2.0",
+  "info": {"title": "Synthetic JumpServer 3.10.15 compatibility fixture", "version": "v1"},
+  "basePath": "/api/v1",
+  "consumes": ["application/json"],
+  "definitions": {
+    "Host": {
+      "type": "object",
+      "required": ["id", "name", "address"],
+      "properties": {
+        "id": {"type": "string", "readOnly": true},
+        "name": {"type": "string", "minLength": 1},
+        "address": {"type": "string"},
+        "is_active": {"type": "boolean", "default": true},
+        "comment": {"type": "string", "x-nullable": true}
+      }
+    }
+  },
+  "paths": {
+    "/assets/hosts/": {
+      "get": {
+        "operationId": "assets_hosts_list",
+        "tags": ["assets_hosts"],
+        "summary": "List hosts",
+        "parameters": [
+          {"name": "search", "in": "query", "type": "string"},
+          {"name": "limit", "in": "query", "type": "integer", "minimum": 1},
+          {"name": "offset", "in": "query", "type": "integer", "minimum": 0},
+          {"name": "is_active", "in": "query", "type": "boolean"},
+          {"name": "ids", "in": "query", "type": "array", "items": {"type": "string"}}
+        ],
+        "responses": {"200": {"description": "OK"}}
+      },
+      "post": {
+        "operationId": "assets_hosts_create",
+        "tags": ["assets_hosts"],
+        "parameters": [{"name": "data", "in": "body", "required": true,
+                        "schema": {"$ref": "#/definitions/Host"}}],
+        "responses": {"201": {"description": "Created"}}
+      }
+    },
+    "/assets/hosts/{id}/": {
+      "parameters": [{"name": "id", "in": "path", "required": true, "type": "string"}],
+      "get": {"operationId": "assets_hosts_read", "tags": ["assets_hosts"],
+              "responses": {"200": {"description": "OK"}}},
+      "patch": {
+        "operationId": "assets_hosts_partial_update",
+        "tags": ["assets_hosts"],
+        "parameters": [{"name": "data", "in": "body", "required": true,
+                        "schema": {"type": "object", "properties": {"name": {"type": "string"}}}}],
+        "responses": {"200": {"description": "OK"}}
+      },
+      "delete": {"operationId": "assets_hosts_delete", "responses": {"204": {"description": "Deleted"}}}
+    },
+    "/users/users/": {
+      "get": {"operationId": "users_users_list", "responses": {"200": {"description": "OK"}}}
+    }
+  }
+}

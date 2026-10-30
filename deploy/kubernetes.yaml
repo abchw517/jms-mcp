@@ -1,0 +1,92 @@
+# 创建命名空间、Secret并将镜像推到你自己的仓库后再应用。
+# Secret名称 jms-mcp-auth，包含 api_key 和 api_token 两个键。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jms-mcp
+  namespace: jms-mcp
+data:
+  jumpserver_url: "https://jumpserver.example.com"
+  server_host: "0.0.0.0"
+  server_port: "8099"
+  read_only: "true"
+  include_paths: "/api/v1/assets/*"
+  max_tools: "100"
+  tls_verify: "true"
+  allowed_hosts: "jms-mcp:*,jms-mcp.jms-mcp.svc:*,jms-mcp.jms-mcp.svc.cluster.local:*,127.0.0.1:*"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jms-mcp
+  namespace: jms-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jms-mcp
+  template:
+    metadata:
+      labels:
+        app: jms-mcp
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: jms-mcp
+          # 占位镜像：自行构建并推送到你的镜像仓库。
+          image: your-registry.example.com/jms-mcp:0.1.0
+          ports:
+            - name: http
+              containerPort: 8099
+          envFrom:
+            - configMapRef:
+                name: jms-mcp
+            - secretRef:
+                name: jms-mcp-auth
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jms-mcp
+  namespace: jms-mcp
+spec:
+  selector:
+    app: jms-mcp
+  ports:
+    - name: http
+      port: 8099
+      targetPort: http

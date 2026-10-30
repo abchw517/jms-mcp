@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jms-mcp"
+version = "0.1.0"
+description = "JumpServer 3.10.15 compatible MCP gateway for Swagger 2 and OpenAPI 3"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "mcp>=1.30,<2",
+  "httpx>=0.28,<0.29",
+  "pydantic-settings>=2.9,<3",
+  "jsonschema>=4.23,<5",
+  "uvicorn>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.25,<2", "ruff>=0.11,<1", "build>=1.2,<2"]
+
+[project.scripts]
+jms-mcp = "jms_mcp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jms_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
