@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-dev --no-editable
 
 # Copy only files needed to install and run the project.
-COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY pyproject.toml uv.lock README.md LICENSE main.py ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
@@ -36,5 +36,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=150s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8099/readyz', timeout=3)"
 
 # Use the installed console entry point; never sync/download packages at startup.
-ENTRYPOINT ["uv", "run", "--no-sync", "jms-mcp"]
+ENTRYPOINT ["uv", "run", "--no-sync", "main.py"]
 CMD ["serve"]

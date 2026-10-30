@@ -42,6 +42,20 @@ pip install .
 jms-mcp serve
 ```
 
+## main.py 统一入口
+
+根目录 `main.py` 复用现有 CLI，无参数时默认执行 `serve`。不在脚本中重复实现认证、配置或服务逻辑，原有 `jms-mcp` 命令继续可用。先按前文安装依赖并配置 `.env`。
+
+```bash
+uv run --frozen main.py --version
+# 启动服务，也可显式添加 serve：
+uv run --frozen main.py
+# 离线查看工具目录：
+uv run --frozen main.py catalog --schema /tmp/jms-swagger-check.json
+```
+
+已安装项目依赖的虚拟环境中，也可直接执行 `python main.py`。
+
 ## 认证配置
 
 ```ini
@@ -129,7 +143,7 @@ include_operations=assets_hosts_list,assets_hosts_create
 
 - Docker 采用 `ghcr.io/astral-sh/uv:0.13.4-python3.11-alpine` 单阶段镜像。通过 bind 挂载 `uv.lock` 与 `pyproject.toml`，先执行 `uv sync --frozen --no-install-project --no-dev --no-editable`，再复制项目并安装；启用 BuildKit 缓存、copy 链接模式与字节码预编译。需要启用 BuildKit 的 Docker/Buildx。
 - 显式使用镜像内的 Python 3.11，禁止 uv 下载解释器；虚拟环境位于 `/app/.venv`。`requirements.lock` 保留为兼容导出，Docker 不再使用它。`--frozen` 直接使用现有锁文件，CI 通过 `uv lock --check` 校验锁文件与项目一致。可通过 `--build-arg UV_IMAGE=...` 覆盖基础镜像，变更后需重新验证。
-- 项目提供的入口是 `jms-mcp`，容器使用 `uv run --no-sync jms-mcp serve`，启动时不重新同步依赖。uv 初始化缓存需要可写临时目录，缓存位于 `/tmp/uv-cache`；只读根文件系统部署需挂载可写 `/tmp`，Compose 与 Kubernetes 模板已配置。
+- 根目录 `main.py` 复用项目 CLI，无参数时默认启动服务；容器使用 `uv run --no-sync main.py serve`，启动时不重新同步依赖。uv 初始化缓存需要可写临时目录，缓存位于 `/tmp/uv-cache`；只读根文件系统部署需挂载可写 `/tmp`，Compose 与 Kubernetes 模板已配置。
 - 镜像以 UID/GID `10001` 运行，支持只读根文件系统。Kubernetes 模板见 [deploy/kubernetes.yaml](deploy/kubernetes.yaml)。
 - 默认校验 TLS。内网 CA 使用 `ca_bundle` 并挂载 CA 文件；`tls_verify=false` 仅用于临时排障。
 - 默认关闭环境 HTTP 代理继承，需要时设置 `trust_env=true`。

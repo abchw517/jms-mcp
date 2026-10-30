@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- 新增根目录 `main.py` 统一入口，无参启动服务，支持版本和 catalog 子命令；Docker 同步使用脚本入口。
+
 - Docker 切换为固定版本 uv Python 3.11 Alpine 单阶段镜像，挂载锁文件与项目配置，分层安装生产依赖。
 - 使用 `UV_COMPILE_BYTECODE=1`、`UV_LINK_MODE=copy` 与 BuildKit 缓存；虚拟环境位于 `/app/.venv`。
-- 使用项目实际入口 `uv run --no-sync jms-mcp serve`，保留非 root 与健康检查。
+- 使用项目实际入口 `uv run --no-sync main.py serve`，保留非 root 与健康检查。
 - uv 缓存位于 `/tmp/uv-cache`，只读容器配置 tmpfs/emptyDir；CI 校验锁文件与 Python 版本，并执行断网运行检查。
 
 ## 0.1.0 — 2026-10-30

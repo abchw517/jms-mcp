@@ -15,7 +15,7 @@ from .config import Settings
 from .schema import SchemaError, compile_catalog
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="JumpServer 3.10.15 MCP gateway")
     parser.add_argument("--version", action="version", version=__version__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -23,7 +23,7 @@ def main() -> None:
     inspect = sub.add_parser("catalog", help="Inspect tools without starting a listener")
     inspect.add_argument("--schema", type=Path, help="Read a local Swagger/OpenAPI JSON")
     inspect.add_argument("--output", type=Path, help="Write catalog JSON to this file")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         settings = Settings()
         # Avoid HTTP SDK debug logs that might include URLs or transport metadata.
