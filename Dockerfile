@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# Use BuildKit's bundled Dockerfile frontend; no Docker Hub frontend image is needed.
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.4-python3.11-alpine
 FROM ${UV_IMAGE}
 

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- 去掉外部 Dockerfile syntax 指令，使用 BuildKit 自带前端，避免构建启动时额外拉取 Docker Hub 前端镜像。
+
 - 新增根目录 `main.py` 统一入口，无参启动服务，支持版本和 catalog 子命令；Docker 同步使用脚本入口。
 
 - Docker 切换为固定版本 uv Python 3.11 Alpine 单阶段镜像，挂载锁文件与项目配置，分层安装生产依赖。

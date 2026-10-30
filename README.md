@@ -156,6 +156,19 @@ include_operations=assets_hosts_list,assets_hosts_create
 - 本版不支持文件上传、表单、Cookie 参数、递归请求 schema、复杂 query 序列化。跳过的接口可在 `catalog` 中查看；不会发布缺少必需输入字段的工具。
 - API 响应属于不可信外部内容；MCP 调用权限仍由客户端和 JumpServer RBAC 共同管理。
 
+## 构建时 Docker Hub 前端镜像拉取超时
+
+如果日志停在 `docker-image://docker.io/docker/dockerfile:1`，并提示访问 `auth.docker.io/token` 超时，失败发生在 Dockerfile 前端加载阶段，还未开始构建应用。本项目使用 BuildKit 自带的 Dockerfile 前端，不设置需要额外拉取镜像的 `# syntax=docker/dockerfile:1`。
+
+旧副本可删除这行后重试：
+
+```bash
+sed -i '/^# syntax=docker\\/dockerfile:1$/d' Dockerfile
+DOCKER_BUILDKIT=1 docker build -t jms-mcp:local .
+```
+
+保留 BuildKit，因为依赖缓存与配置文件挂载使用 `RUN --mount`。此修改消除 Docker Hub 前端镜像拉取需求；基础镜像、Python 依赖和 Alpine 软件源仍需按构建步骤访问。基础镜像已同步到内部仓库时，可通过 `--build-arg UV_IMAGE=<内部镜像地址>` 指定。
+
 ## 开发与验证
 
 ```bash
